@@ -1,5 +1,7 @@
 import os
 from typing import BinaryIO
+import multiprocessing
+import regex as re
 
 def find_chunk_boundaries(
     file: BinaryIO, 
@@ -49,14 +51,36 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
+def pre_tokenize_chunk(chunk: str):
+    """
+    Pre-tokenize a chunk of text.
+    """
+    PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+    pre_tokens = re.findall(PAT, chunk)
+    print(f"Chunk size: {len(chunk)}")
+    print(f"Number of pre-tokens: {len(pre_tokens)}")
+    print("First 5 pre-tokens:")
+    for i in range(min(len(pre_tokens), 5)):
+        print(pre_tokens[i])
+    return pre_tokens
+
+
 ## Usage
 with open(..., "rb") as f:
     boundaries = find_chunk_boundaries(
         f, num_processes, "<|endoftext|>".encode("utf-8"))
-        
+
     # The following is a serial implementation, but you can parallelize this 
     # by sending each start/end pair to a set of processes.
+    chunks = []
     for start, end in zip(boundaries[:-1], boundaries[1:]):
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8", errors="ignore")
-        # Run pre-tokenization on your chunk and store the counts for each pre-token
+        chunks.append(chunk)
+
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        list_of_pretokens = pool.map(pre_tokenize_chunk, chunks)
+
+    pre_token_sum = [pretoken for pretokens in list_of_pretokens for pretoken in pretokens]
+    print(f"Total number of pre-tokens: {len(pre_token_sum)}")
+    
