@@ -1,4 +1,5 @@
 import os
+from datasets import load_dataset
 from typing import BinaryIO
 import multiprocessing
 import regex as re
@@ -51,7 +52,7 @@ def find_chunk_boundaries(
     # Make sure all boundaries are unique, but might be fewer than desired_num_chunks
     return sorted(set(chunk_boundaries))
 
-def pre_tokenize_chunk(chunk: str):
+def regex_split(chunk: str):
     """
     Pre-tokenize a chunk of text.
     """
@@ -65,22 +66,20 @@ def pre_tokenize_chunk(chunk: str):
     return pre_tokens
 
 
-## Usage
-with open(..., "rb") as f:
-    boundaries = find_chunk_boundaries(
-        f, num_processes, "<|endoftext|>".encode("utf-8"))
+def pre_tokenize(corpus_path ,num_processes: int = 8):   
+    with open("tiny_stories.txt", "rb") as f:
+        boundaries = find_chunk_boundaries(
+            f, num_processes, "<|endoftext|>".encode("utf-8"))
+        # The following is a serial implementation, but you can parallelize this 
+        # by sending each start/end pair to a set of processes.
+        chunks = []
+        for start, end in zip(boundaries[:-1], boundaries[1:]):
+            f.seek(start)
+            chunk = f.read(end - start).decode("utf-8", errors="ignore")
+            chunks.append(chunk)
 
-    # The following is a serial implementation, but you can parallelize this 
-    # by sending each start/end pair to a set of processes.
-    chunks = []
-    for start, end in zip(boundaries[:-1], boundaries[1:]):
-        f.seek(start)
-        chunk = f.read(end - start).decode("utf-8", errors="ignore")
-        chunks.append(chunk)
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            list_of_pretokens = pool.map(regex_split, chunks)
 
-    with multiprocessing.Pool(processes=num_processes) as pool:
-        list_of_pretokens = pool.map(pre_tokenize_chunk, chunks)
-
-    pre_token_sum = [pretoken for pretokens in list_of_pretokens for pretoken in pretokens]
-    print(f"Total number of pre-tokens: {len(pre_token_sum)}")
-    
+        pre_token_sum = [pretoken for pretokens in list_of_pretokens for pretoken in pretokens]
+        print(f"Total number of pre-tokens: {len(pre_token_sum)}")
