@@ -1,5 +1,4 @@
 import os
-from datasets import load_dataset
 from typing import BinaryIO
 import multiprocessing
 import regex as re
@@ -63,11 +62,14 @@ def regex_split(chunk: str):
     print("First 5 pre-tokens:")
     for i in range(min(len(pre_tokens), 5)):
         print(pre_tokens[i])
-    return pre_tokens
+    word_count = {}
+    for pre_token in pre_tokens:
+        word_count[pre_token] = word_count.get(pre_token, 0) + 1
+    return word_count
 
 
 def pre_tokenize(corpus_path ,num_processes: int = 8):   
-    with open("tiny_stories.txt", "rb") as f:
+    with open(corpus_path, "rb") as f:
         boundaries = find_chunk_boundaries(
             f, num_processes, "<|endoftext|>".encode("utf-8"))
         # The following is a serial implementation, but you can parallelize this 
@@ -79,7 +81,11 @@ def pre_tokenize(corpus_path ,num_processes: int = 8):
             chunks.append(chunk)
 
         with multiprocessing.Pool(processes=num_processes) as pool:
-            list_of_pretokens = pool.map(regex_split, chunks)
+            word_count_list = pool.map(regex_split, chunks)
 
-        pre_token_sum = [pretoken for pretokens in list_of_pretokens for pretoken in pretokens]
-        print(f"Total number of pre-tokens: {len(pre_token_sum)}")
+        word_count_sum = {}
+        for word_count in word_count_list:
+            for word, count in word_count.items():
+                word_count_sum[word] = word_count_sum.get(word, 0) + count
+        print(f"Total number of pre-tokens: {len(word_count_sum.keys())}")
+        return word_count_sum
