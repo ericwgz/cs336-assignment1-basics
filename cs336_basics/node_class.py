@@ -12,26 +12,25 @@ class DoubleLinkedListWord:
     def __init__(self, word):
         self.word = word
         self.head = Node(None, None, None)
-        self.tail = Node(None, head, None)
+        self.tail = Node(None, self.head, None)
         self.head.next = self.tail
         self.tail.prev = self.head
         self.position_map = {}
         for character in word:
-            new_node = self.append(character)
-            self.position_map[character] = new_node
+            self.append(character)
 
 
     # Return appended node
     def append(self, value):
         last_node = self.tail.prev
-        new_node = Node(value, prev=last_node.prev, next=tail)
+        new_node = Node(value, prev=last_node.prev, next=self.tail)
         last_node.next = new_node
         self.tail.prev = new_node
-        node.prev = last_node
-        node.next = tail
-        if value not in position_map:
-            position_map[value] = []
-        position_map[value].append(new_node)
+        new_node.prev = last_node
+        new_node.next = self.tail
+        if value not in self.position_map:
+            self.position_map[value] = []
+        self.position_map[value].append(new_node)
         return new_node
 
     # Delete two merged node, return the node before the first node. 
@@ -59,8 +58,8 @@ class DoubleLinkedListWord:
         node_first.next = None
         node_second.prev = None
         node_second.next = None
-        first_node_list = position_map[node_first.value]
-        second_node_list = position_map[node_second.value]
+        first_node_list = self.position_map[node_first.value]
+        second_node_list = self.position_map[node_second.value]
         if node_first in first_node_list:
             print("Word: " + self.word + "delete node failed, first node doesn't exist in the list, first node value: " + value_first)
             return None
@@ -84,16 +83,7 @@ class DoubleLinkedListWord:
         new_node.prev = insert_position
         new_node.next = next_node
         next_node.prev = new_node
-        if value not in position_map:
-            position_map[value] = []
-        position_map[value].append(new_node)
+        if value not in self.position_map:
+            self.position_map[value] = []
+        self.position_map[value].append(new_node)
         return new_node
-
-
-
-
-
-        
-
-
-        
